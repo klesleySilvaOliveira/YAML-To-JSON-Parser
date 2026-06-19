@@ -1,15 +1,26 @@
 # YAML Key Remover
 
-A small Python command-line tool that removes configured keys from any YAML file and exports the removed values to a grouped JSON report.
+A small Python command-line tool that removes configured keys from YAML files and exports the removed values to a grouped JSON report.
 
 The tool uses bracket paths such as `[catalog][products][details][name]`. This avoids ambiguity when YAML keys contain dots, slashes, spaces, or other special characters.
 
-## Requirements
+## Features
+
+- Removes configured dictionary keys from YAML documents.
+- Supports YAML files with one or many documents.
+- Traverses lists automatically when no numeric index is provided.
+- Supports nested lists.
+- Supports explicit list indexes when only one position should be targeted.
+- Keeps removed lists as JSON arrays in the report.
+- Groups removed values by source location.
+- Uses only generic examples and does not depend on any specific YAML platform or schema.
+
+## Requirements for local execution
 
 - Python 3.10+
 - PyYAML
 
-## Installation
+## Local installation
 
 ```bash
 python3 -m venv .venv
@@ -17,7 +28,7 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-## Usage
+## Local usage
 
 ```bash
 python yaml_key_remover.py input.yaml keys.json output.yaml
@@ -25,8 +36,124 @@ python yaml_key_remover.py input.yaml keys.json output.yaml
 
 The command creates:
 
-- `output.yaml`: the YAML file after the configured keys are removed;
+- `output.yaml`: the YAML file after the configured keys are removed.
 - `grouped_removed_values.json`: a JSON report with the removed values grouped by their source location.
+
+## Docker usage
+
+Docker lets you run the tool without installing Python dependencies on your machine.
+
+Build the image:
+
+```bash
+docker build -t yaml-key-remover .
+```
+
+Run the example files stored in the `examples` directory:
+
+```bash
+docker run --rm \
+  --user "$(id -u):$(id -g)" \
+  -v "$(pwd):/work" \
+  -w /work \
+  yaml-key-remover \
+  examples/sample.yaml \
+  examples/keys.json \
+  examples/output.yaml
+```
+
+Run with your own files stored inside the project directory:
+
+```bash
+docker run --rm \
+  --user "$(id -u):$(id -g)" \
+  -v "$(pwd):/work" \
+  -w /work \
+  yaml-key-remover \
+  input.yaml \
+  keys.json \
+  output.yaml
+```
+
+The `-w /work` option sets the container working directory to `/work`. This allows you to pass relative paths such as `examples/sample.yaml` instead of `/work/examples/sample.yaml`.
+
+The `--user "$(id -u):$(id -g)"` option helps avoid root-owned output files on Linux.
+
+### Docker file path rules
+
+When using Docker, the container can only access files from directories that were mounted with `-v`. In the commands above, this part:
+
+```bash
+-v "$(pwd):/work"
+```
+
+means that only the current host directory is available inside the container as `/work`.
+
+If your YAML file is outside the project directory, for example in your `Downloads` folder, passing the host path directly will not work unless that folder is also mounted. You have two common options.
+
+Option 1: copy the YAML file into the project directory and run the command normally.
+
+Option 2: mount the external folder too. Example:
+
+```bash
+docker run --rm \
+  --user "$(id -u):$(id -g)" \
+  -v "$(pwd):/work" \
+  -v "$HOME/Downloads:/input:ro" \
+  -w /work \
+  yaml-key-remover \
+  /input/my-file.yaml \
+  examples/keys.json \
+  output.yaml
+```
+
+In this example, the input YAML is read from the mounted `Downloads` folder, while the configuration file and output files remain in the project directory.
+
+## Docker Compose usage
+
+Build the image:
+
+```bash
+docker compose build
+```
+
+Run the example files stored in the `examples` directory:
+
+```bash
+UID=$(id -u) GID=$(id -g) docker compose run --rm yaml-key-remover \
+  examples/sample.yaml \
+  examples/keys.json \
+  examples/output.yaml
+```
+
+Run with your own files stored inside the project directory:
+
+```bash
+UID=$(id -u) GID=$(id -g) docker compose run --rm yaml-key-remover \
+  input.yaml \
+  keys.json \
+  output.yaml
+```
+
+## Makefile shortcuts
+
+Build the image:
+
+```bash
+make build
+```
+
+Run the example:
+
+```bash
+make run-example
+```
+
+Show help:
+
+```bash
+make help
+```
 
 ## Key configuration
 
@@ -56,7 +183,7 @@ Use bracket notation for every path segment:
 [parent][child][target]
 ```
 
-If the traversal reaches a list and the path does not provide an index, the tool searches every list element automatically.
+If traversal reaches a list and the path does not provide an index, the tool searches every list element automatically.
 
 Example:
 
@@ -139,8 +266,6 @@ Example:
 - Recursive YAML aliases are not supported.
 - If a parent key and one of its child keys are configured for removal at the same time, prefer removing only the parent key or only the child keys to avoid redundant report expectations.
 
-## Example
+## Repository safety note
 
-```bash
-python yaml_key_remover.py examples/sample.yaml examples/keys.json examples/output.yaml
-```
+Do not commit real private YAML files, generated reports, credentials, tokens, environment-specific names, or internal configuration values to a public repository. Keep public examples generic.

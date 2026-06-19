@@ -1,0 +1,8 @@
+services:
+  yaml-key-remover:
+    build: .
+    image: yaml-key-remover:latest
+    volumes:
+      - ./:/work
+    working_dir: /work
+    user: "${UID:-1000}:${GID:-1000}"

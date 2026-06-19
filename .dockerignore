@@ -1,0 +1,13 @@
+.git
+.gitignore
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.log
+*.tmp
+*.bak
+.DS_Store
+grouped_removed_values.json
+examples/output.yaml
