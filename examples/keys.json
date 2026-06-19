@@ -1,0 +1,11 @@
+{
+  "output": {
+    "removedValuesFile": "grouped_removed_values.json",
+    "groupBy": "firstList"
+  },
+  "keys": {
+    "productName": "[catalog][products][details][name]",
+    "binCode": "[catalog][products][locations][bins][code]",
+    "tags": "[catalog][products][tags]"
+  }
+}

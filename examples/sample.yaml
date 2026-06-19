@@ -1,0 +1,27 @@
+catalog:
+  products:
+    - sku: SKU-001
+      details:
+        name: Sample Product A
+        status: active
+      locations:
+        - warehouse: WH-A
+          bins:
+            - code: A-01
+              quantity: 10
+            - code: A-02
+              quantity: 5
+      tags:
+        - sample
+        - demo
+    - sku: SKU-002
+      details:
+        name: Sample Product B
+        status: inactive
+      locations:
+        - warehouse: WH-B
+          bins:
+            - code: B-01
+              quantity: 7
+      tags:
+        - archived
