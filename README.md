@@ -15,6 +15,48 @@ The tool uses bracket paths such as `[catalog][products][details][name]`. This a
 - Groups removed values by source location.
 - Uses only generic examples and does not depend on any specific YAML platform or schema.
 
+## Getting the project
+
+Clone the repository from GitHub and enter the project directory:
+
+```bash
+git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
+cd YOUR_REPOSITORY
+```
+
+Replace `YOUR_USERNAME` and `YOUR_REPOSITORY` with the correct GitHub account and repository name.
+
+If the repository is private, make sure the GitHub account configured on the machine has access to it. You can clone with HTTPS or SSH, depending on how Git is configured on the machine.
+
+HTTPS example:
+
+```bash
+git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
+```
+
+SSH example:
+
+```bash
+git clone git@github.com:YOUR_USERNAME/YOUR_REPOSITORY.git
+```
+
+After cloning, run the example with Docker:
+
+```bash
+docker build -t yaml-key-remover .
+
+docker run --rm \
+  --user "$(id -u):$(id -g)" \
+  -v "$(pwd):/work" \
+  -w /work \
+  yaml-key-remover \
+  examples/sample.yaml \
+  examples/keys.json \
+  examples/output.yaml
+```
+
+To use your own files, place them inside the cloned project directory or mount the external folder with Docker. Then update the input YAML path, key configuration path, and output YAML path in the command.
+
 ## Requirements for local execution
 
 - Python 3.10+
