@@ -17,28 +17,16 @@ The tool uses bracket paths such as `[catalog][products][details][name]`. This a
 
 ## Getting the project
 
-Clone the repository from GitHub and enter the project directory:
+Clone the repository from GitHub using SSH and enter the project directory:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
-cd YOUR_REPOSITORY
+git clone git@github.com:klesleySilvaOliveira/YAML-To-JSON-Parser.git
+cd YAML-To-JSON-Parser
 ```
 
-Replace `YOUR_USERNAME` and `YOUR_REPOSITORY` with the correct GitHub account and repository name.
+If the repository is private, make sure the GitHub account configured on the machine has access to it and that SSH authentication is properly configured.
 
-If the repository is private, make sure the GitHub account configured on the machine has access to it. You can clone with HTTPS or SSH, depending on how Git is configured on the machine.
-
-HTTPS example:
-
-```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
-```
-
-SSH example:
-
-```bash
-git clone git@github.com:YOUR_USERNAME/YOUR_REPOSITORY.git
-```
+If you are using a fork or a different remote, replace the repository URL with the correct one before running `git clone`.
 
 After cloning, run the example with Docker:
 
