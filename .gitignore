@@ -4,3 +4,8 @@ __pycache__/
 .env
 output.yaml
 grouped_removed_values.json
+mapped_removed_values.json
+examples/output.yaml
+examples/grouped_removed_values.json
+examples/mapped_removed_values.json
+examples/mapped_removed_values_standalone.json

@@ -11,5 +11,6 @@ RUN python -m pip install --upgrade pip \
     && python -m pip install -r requirements.txt
 
 COPY yaml_key_remover.py ./
+COPY removed_values_mapper.py ./
 
 ENTRYPOINT ["python", "/app/yaml_key_remover.py"]

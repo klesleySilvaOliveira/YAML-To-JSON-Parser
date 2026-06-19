@@ -9,10 +9,13 @@ from typing import Any
 
 import yaml
 
+from removed_values_mapper import DEFAULT_DUPLICATE_LABEL_MODE, map_grouped_removed_values, write_mapped_values
+
 
 DEFAULT_RESULT_FILE = "grouped_removed_values.json"
 DEFAULT_GROUP_BY = "firstList"
 VALID_GROUP_BY_MODES = {"firstList", "nearestList", "root"}
+VALID_DUPLICATE_LABEL_MODES = {"list", "last", "error"}
 
 
 def parse_path(path: str) -> list[str]:
@@ -336,7 +339,38 @@ def build_grouped_removed_values(documents: list[Any], parsed_keys: list[dict], 
     return list(grouped.values())
 
 
-def read_keys_config(json_keys_file: str) -> tuple[list[dict], str, str]:
+def read_boolean_config(config: dict, key: str, default: bool = False) -> bool:
+    value = config.get(key, default)
+
+    if isinstance(value, bool):
+        return value
+
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "y"}:
+            return True
+        if normalized in {"false", "0", "no", "n"}:
+            return False
+
+    raise ValueError(f"Invalid boolean value for {key}: {value}")
+
+
+def read_string_list_config(config: dict, key: str) -> list[str]:
+    value = config.get(key, [])
+
+    if value is None:
+        return []
+
+    if isinstance(value, str):
+        return [value]
+
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return value
+
+    raise ValueError(f"Invalid list value for {key}. Expected a string or a list of strings.")
+
+
+def read_keys_config(json_keys_file: str) -> tuple[list[dict], str, str, str | None, str, bool, bool, list[str]]:
     with open(json_keys_file, "r", encoding="utf-8") as file:
         config = json.load(file)
 
@@ -367,7 +401,40 @@ def read_keys_config(json_keys_file: str) -> tuple[list[dict], str, str]:
         valid_modes = ", ".join(sorted(VALID_GROUP_BY_MODES))
         raise ValueError(f"Invalid group mode: {group_by}. Valid modes: {valid_modes}")
 
-    return parsed_keys, result_file, group_by
+    mapped_values_file = output_config.get("mappedValuesFile", config.get("mappedValuesFile"))
+    if mapped_values_file is not None and (not isinstance(mapped_values_file, str) or not mapped_values_file.strip()):
+        mapped_values_file = None
+
+    duplicate_label_mode = output_config.get(
+        "duplicateLabels",
+        config.get("duplicateLabels", DEFAULT_DUPLICATE_LABEL_MODE),
+    )
+    if duplicate_label_mode not in VALID_DUPLICATE_LABEL_MODES:
+        valid_modes = ", ".join(sorted(VALID_DUPLICATE_LABEL_MODES))
+        raise ValueError(f"Invalid duplicate label mode: {duplicate_label_mode}. Valid modes: {valid_modes}")
+
+    include_group_metadata = read_boolean_config(
+        output_config,
+        "mappedIncludeGroupMetadata",
+        read_boolean_config(config, "mappedIncludeGroupMetadata", False),
+    )
+    unwrap_single_item_lists = read_boolean_config(
+        output_config,
+        "unwrapSingleItemLists",
+        read_boolean_config(config, "unwrapSingleItemLists", False),
+    )
+    unwrap_labels = read_string_list_config(output_config, "unwrapLabels") or read_string_list_config(config, "unwrapLabels")
+
+    return (
+        parsed_keys,
+        result_file,
+        group_by,
+        mapped_values_file,
+        duplicate_label_mode,
+        include_group_metadata,
+        unwrap_single_item_lists,
+        unwrap_labels,
+    )
 
 
 def read_yaml_documents(yaml_input_file: str) -> list[Any]:
@@ -377,7 +444,14 @@ def read_yaml_documents(yaml_input_file: str) -> list[Any]:
     return [clone_yaml_data(document) for document in loaded_documents]
 
 
+def ensure_parent_directory(file_path: str) -> None:
+    parent_directory = os.path.dirname(os.path.abspath(file_path))
+    if parent_directory:
+        os.makedirs(parent_directory, exist_ok=True)
+
+
 def write_yaml_documents(documents: list[Any], output_file: str) -> None:
+    ensure_parent_directory(output_file)
     with open(output_file, "w", encoding="utf-8") as file:
         if len(documents) > 1:
             yaml.safe_dump_all(
@@ -398,6 +472,7 @@ def write_yaml_documents(documents: list[Any], output_file: str) -> None:
 
 
 def write_removed_values(result_output_file: str, grouped_removed_values: list[dict]) -> None:
+    ensure_parent_directory(result_output_file)
     with open(result_output_file, "w", encoding="utf-8") as file:
         json.dump(
             grouped_removed_values,
@@ -414,6 +489,31 @@ def build_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("input_yaml", help="Source YAML file.")
     parser.add_argument("keys_json", help="JSON file containing the key paths to remove.")
     parser.add_argument("output_yaml", help="Output YAML file after removals.")
+    parser.add_argument(
+        "--mapped-output",
+        help="Optional output JSON file that maps each removed label directly to its removed value.",
+    )
+    parser.add_argument(
+        "--duplicate-labels",
+        choices=sorted(VALID_DUPLICATE_LABEL_MODES),
+        help="How to handle repeated labels in the mapped output. Overrides the JSON configuration.",
+    )
+    parser.add_argument(
+        "--mapped-include-group-metadata",
+        action="store_true",
+        help="Include source-location metadata under the reserved _group key in the mapped output.",
+    )
+    parser.add_argument(
+        "--unwrap-single-item-lists",
+        action="store_true",
+        help="Convert every single-item list into its single value in the mapped output.",
+    )
+    parser.add_argument(
+        "--unwrap-label",
+        action="append",
+        default=[],
+        help="Convert a single-item list into a scalar only for this label. Can be used more than once.",
+    )
     return parser
 
 
@@ -424,7 +524,16 @@ def main() -> None:
     output_dir = os.path.dirname(os.path.abspath(args.output_yaml)) or "."
 
     documents = read_yaml_documents(args.input_yaml)
-    parsed_keys, result_file_name, group_by = read_keys_config(args.keys_json)
+    (
+        parsed_keys,
+        result_file_name,
+        group_by,
+        mapped_values_file_name,
+        duplicate_label_mode,
+        include_group_metadata,
+        unwrap_single_item_lists,
+        unwrap_labels,
+    ) = read_keys_config(args.keys_json)
 
     grouped_removed_values = build_grouped_removed_values(documents, parsed_keys, group_by)
 
@@ -433,10 +542,35 @@ def main() -> None:
     result_output_file = os.path.join(output_dir, result_file_name)
     write_removed_values(result_output_file, grouped_removed_values)
 
+    selected_mapped_output = args.mapped_output or mapped_values_file_name
+    selected_duplicate_label_mode = args.duplicate_labels or duplicate_label_mode
+    selected_include_group_metadata = args.mapped_include_group_metadata or include_group_metadata
+    selected_unwrap_single_item_lists = args.unwrap_single_item_lists or unwrap_single_item_lists
+    selected_unwrap_labels = set(unwrap_labels) | set(args.unwrap_label or [])
+
+    if selected_mapped_output:
+        mapped_output_file = os.path.join(output_dir, selected_mapped_output)
+        mapped_values = map_grouped_removed_values(
+            grouped_removed_values=grouped_removed_values,
+            duplicate_label_mode=selected_duplicate_label_mode,
+            include_group_metadata=selected_include_group_metadata,
+            unwrap_single_item_lists=selected_unwrap_single_item_lists,
+            unwrap_labels=selected_unwrap_labels,
+        )
+        write_mapped_values(mapped_output_file, mapped_values)
+
     total_removals = sum(len(group["removedValues"]) for group in grouped_removed_values)
 
     print(f"YAML output: {args.output_yaml}")
     print(f"Grouped removed values: {result_output_file}")
+    if selected_mapped_output:
+        print(f"Mapped removed values: {mapped_output_file}")
+        print(f"Duplicate label mode: {selected_duplicate_label_mode}")
+        print(f"Mapped group metadata: {selected_include_group_metadata}")
+        if selected_unwrap_single_item_lists:
+            print("Single-item list unwrapping: all labels")
+        elif selected_unwrap_labels:
+            print(f"Single-item list unwrapping labels: {', '.join(sorted(selected_unwrap_labels))}")
     print(f"Group mode: {group_by}")
     print(f"Total groups: {len(grouped_removed_values)}")
     print(f"Total removals: {total_removals}")
