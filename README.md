@@ -17,22 +17,40 @@ The tool uses bracket paths such as `[catalog][products][details][name]`. This a
 
 ## Getting the project
 
-Clone the repository from GitHub using SSH and enter the project directory:
+Clone the repository from GitHub and enter the project directory:
 
 ```bash
-git clone git@github.com:klesleySilvaOliveira/YAML-To-JSON-Parser.git
-cd YAML-To-JSON-Parser
+git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
+cd YOUR_REPOSITORY
 ```
 
-If the repository is private, make sure the GitHub account configured on the machine has access to it and that SSH authentication is properly configured.
+Replace `YOUR_USERNAME` and `YOUR_REPOSITORY` with the correct GitHub account and repository name.
 
-If you are using a fork or a different remote, replace the repository URL with the correct one before running `git clone`.
+If the repository is private, make sure the GitHub account configured on the machine has access to it. You can clone with HTTPS or SSH, depending on how Git is configured on the machine.
 
-After cloning, run the example with Docker:
+HTTPS example:
+
+```bash
+git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
+```
+
+SSH example:
+
+```bash
+git clone git@github.com:YOUR_USERNAME/YOUR_REPOSITORY.git
+```
+
+After cloning, build the Docker image:
 
 ```bash
 docker build -t yaml-key-remover .
+```
 
+Then run the example using the command that matches your terminal.
+
+Linux, macOS, WSL, or Git Bash:
+
+```bash
 docker run --rm \
   --user "$(id -u):$(id -g)" \
   -v "$(pwd):/work" \
@@ -40,6 +58,30 @@ docker run --rm \
   yaml-key-remover \
   examples/sample.yaml \
   examples/keys.json \
+  examples/output.yaml
+```
+
+Windows PowerShell:
+
+```powershell
+docker run --rm `
+  -v "${PWD}:/work" `
+  -w /work `
+  yaml-key-remover `
+  examples/sample.yaml `
+  examples/keys.json `
+  examples/output.yaml
+```
+
+Windows CMD:
+
+```cmd
+docker run --rm ^
+  -v "%cd%:/work" ^
+  -w /work ^
+  yaml-key-remover ^
+  examples/sample.yaml ^
+  examples/keys.json ^
   examples/output.yaml
 ```
 
@@ -79,7 +121,9 @@ Build the image:
 docker build -t yaml-key-remover .
 ```
 
-Run the example files stored in the `examples` directory:
+Run the example files stored in the `examples` directory.
+
+Linux, macOS, WSL, or Git Bash:
 
 ```bash
 docker run --rm \
@@ -92,7 +136,33 @@ docker run --rm \
   examples/output.yaml
 ```
 
-Run with your own files stored inside the project directory:
+Windows PowerShell:
+
+```powershell
+docker run --rm `
+  -v "${PWD}:/work" `
+  -w /work `
+  yaml-key-remover `
+  examples/sample.yaml `
+  examples/keys.json `
+  examples/output.yaml
+```
+
+Windows CMD:
+
+```cmd
+docker run --rm ^
+  -v "%cd%:/work" ^
+  -w /work ^
+  yaml-key-remover ^
+  examples/sample.yaml ^
+  examples/keys.json ^
+  examples/output.yaml
+```
+
+Run with your own files stored inside the project directory.
+
+Linux, macOS, WSL, or Git Bash:
 
 ```bash
 docker run --rm \
@@ -105,9 +175,35 @@ docker run --rm \
   output.yaml
 ```
 
+Windows PowerShell:
+
+```powershell
+docker run --rm `
+  -v "${PWD}:/work" `
+  -w /work `
+  yaml-key-remover `
+  input.yaml `
+  keys.json `
+  output.yaml
+```
+
+Windows CMD:
+
+```cmd
+docker run --rm ^
+  -v "%cd%:/work" ^
+  -w /work ^
+  yaml-key-remover ^
+  input.yaml ^
+  keys.json ^
+  output.yaml
+```
+
 The `-w /work` option sets the container working directory to `/work`. This allows you to pass relative paths such as `examples/sample.yaml` instead of `/work/examples/sample.yaml`.
 
-The `--user "$(id -u):$(id -g)"` option helps avoid root-owned output files on Linux.
+The `--user "$(id -u):$(id -g)"` option helps avoid root-owned output files on Linux. On native Windows terminals, you can usually omit this option.
+
+Line continuation characters depend on the terminal. Use `\` in Linux-style shells, the backtick character in PowerShell, and `^` in CMD. In PowerShell, the backtick must be the last character on the line, with no spaces after it.
 
 ### Docker file path rules
 
@@ -123,7 +219,9 @@ If your YAML file is outside the project directory, for example in your `Downloa
 
 Option 1: copy the YAML file into the project directory and run the command normally.
 
-Option 2: mount the external folder too. Example:
+Option 2: mount the external folder too.
+
+Linux, macOS, WSL, or Git Bash example:
 
 ```bash
 docker run --rm \
@@ -137,7 +235,20 @@ docker run --rm \
   output.yaml
 ```
 
-In this example, the input YAML is read from the mounted `Downloads` folder, while the configuration file and output files remain in the project directory.
+Windows PowerShell example:
+
+```powershell
+docker run --rm `
+  -v "${PWD}:/work" `
+  -v "$HOME/Downloads:/input:ro" `
+  -w /work `
+  yaml-key-remover `
+  /input/my-file.yaml `
+  examples/keys.json `
+  output.yaml
+```
+
+In these examples, the input YAML is read from the mounted `Downloads` folder, while the configuration file and output files remain in the project directory.
 
 ## Docker Compose usage
 
